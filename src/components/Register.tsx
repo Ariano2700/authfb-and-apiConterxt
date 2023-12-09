@@ -4,25 +4,13 @@ import SolarUserOutline from "../assets/icons/solar/SolarUserOutline";
 import InputForm from "./login-components/InputForm";
 import { useAuth } from "../context/authContext";
 import { useNavigate } from "react-router-dom";
-import Swal from "sweetalert2";
+import { ErrorAlert } from "./ErrorAlert";
 
 type handleChangeType = (e: ChangeEvent<HTMLInputElement>) => void;
 type handleSubmitType = (e: FormEvent<HTMLFormElement>) => void;
-type ErrorType = { error: string | null }
-
-function ErrorAlert({ error }: ErrorType) {
-  if (!error) {
-    return null;
-  }
-  Swal.fire({
-    title: "Error!",
-    text: error,
-    icon: "error",
-    confirmButtonText: "Accept",
-  });
-}
 
 const Register = () => {
+  const {singUp} = useAuth();
   const navigate = useNavigate();
   const [user, setUser] = useState({
     email: "",
@@ -40,12 +28,30 @@ const Register = () => {
       await singUp({ email: user.email, password: user.password });
       navigate("/");
     } catch (error: any) {
-      setError(error.message || "Error desconocido");
-      setShowErrorDialog(true)
-      console.log(error.message);
+      if (error.message === "Firebase: Error (auth/invalid-email).") {
+        setError("Correo electrónico no válido" || "Error desconocido");
+        setShowErrorDialog(true);
+        console.log(error.message);
+      }
+      if (
+        error.message ===
+        "Firebase: Password should be at least 6 characters (auth/weak-password)."
+      ) {
+        setError(
+          "La contraseña debe tener minimo 6 caracteres" || "Error desconocido"
+        );
+        setShowErrorDialog(true);
+        console.log(error.message);
+      }
+      if (error.message === "Firebase: Error(auth/email-already-in-use).") {
+        setError(
+          "El correo ya esta en uso, coloque otro correo" || "Error desconocido"
+        );
+        setShowErrorDialog(true);
+        console.log(error.message);
+      }
     }
   };
-  const singUp = useAuth();
   return (
     <div className="max-w-md bg-blue-400 rounded-md">
       {showErrorDialog && ErrorAlert({error})}
