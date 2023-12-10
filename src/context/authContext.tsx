@@ -11,11 +11,15 @@ import {
   signInWithEmailAndPassword,
   onAuthStateChanged,
   signOut,
+  GoogleAuthProvider,
+  signInWithPopup,
   User as FirebaseUser,
 } from "firebase/auth";
 import { auth as authFirebase } from "../firebase/firebaseConfig";
 
 type LogOutFunction = () => void;
+// type LogInWithGoogleFunction = Promise<UserCredential> | void;
+type LogInWithGoogleFunction = () =>void;
 
 type SingUpAndLoginFunction = {
   singUp: (auth: Auth) => void;
@@ -23,6 +27,7 @@ type SingUpAndLoginFunction = {
   user: FirebaseUser | null;
   logOut: LogOutFunction;
   loading: boolean;
+  loginWhitGoogle: LogInWithGoogleFunction;
 };
 
 type AuthProviderProps = {
@@ -43,7 +48,8 @@ export const useAuth = () => {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
 
-  const [loading, setLoading] = useState<SingUpAndLoginFunction['loading']>(true);
+  const [loading, setLoading] =
+    useState<SingUpAndLoginFunction["loading"]>(true);
 
   const singUp: SingUpAndLoginFunction["singUp"] = async (auth) => {
     const { email, password } = auth;
@@ -61,17 +67,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
       throw new Error(error.message || "Error desconocido");
     }
   };
+  const loginWhitGoogle: LogInWithGoogleFunction = async () =>{
+    const googleProvider = new GoogleAuthProvider();
+    try {      
+      await signInWithPopup(authFirebase, googleProvider)
+    } catch (error: any) {
+      if (error.code === 'auth/cancelled-popup-request') {
+        console.log('Inicio de sesión cancelado por el usuario');
+      } else {
+        console.error('Error durante el inicio de sesión', error);
+      }
+    }
+  }
   const logOut: LogOutFunction = () => {
     signOut(authFirebase);
   };
   useEffect(() => {
-    onAuthStateChanged(authFirebase, (currentUser) => {
+    const unsuscribe = onAuthStateChanged(authFirebase, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
     });
+    return unsuscribe;
   }, []);
   return (
-    <authContext.Provider value={{ singUp, login, user, logOut, loading}}>
+    <authContext.Provider value={{ singUp, login, user, logOut, loading, loginWhitGoogle }}>
       {children}
     </authContext.Provider>
   );
